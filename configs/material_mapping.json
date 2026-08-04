@@ -1,0 +1,11 @@
+{
+  "config_version": "2.0",
+  "canonical_materials": ["混凝土", "钢材", "木材", "玻璃", "铝合金"],
+  "aliases": {
+    "混凝土": ["混凝土", "Concrete"],
+    "钢材": ["钢材", "Steel"],
+    "木材": ["木材", "Wood"],
+    "玻璃": ["玻璃", "Glass"],
+    "铝合金": ["铝合金", "Aluminum"]
+  }
+}

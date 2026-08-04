@@ -1,0 +1,12 @@
+{
+  "config_version": "2.0",
+  "allowed_patterns": {
+    "IfcBeam": "^梁-[A-Z]{2}-\\d{3}$",
+    "IfcColumn": "^柱-[A-Z]{2}-\\d{3}$",
+    "IfcSlab": "^板-[A-Z]{2}-\\d{3}$",
+    "IfcWall": "^墙-[A-Z]{2}-\\d{3}$",
+    "IfcDoor": "^门-[A-Z]{2}-\\d{3}$",
+    "IfcWindow": "^窗-[A-Z]{2}-\\d{3}$"
+  },
+  "invalid_name_examples": ["INVALID", "未命名", "???"]
+}

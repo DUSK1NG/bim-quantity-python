@@ -1,0 +1,7 @@
+category,material,unit,unit_price
+Beam,混凝土,m³,520
+Column,混凝土,m³,560
+Slab,混凝土,m³,480
+Wall,混凝土,m³,430
+Door,木材,樘,860
+Window,玻璃,樘,720

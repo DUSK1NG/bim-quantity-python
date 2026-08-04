@@ -1,0 +1,9 @@
+{
+  "config_version": "2.0",
+  "canonical_levels": ["一层", "二层", "三层"],
+  "aliases": {
+    "一层": ["一层", "Level 1", "1F", "First Floor"],
+    "二层": ["二层", "Level 2", "2F", "Second Floor"],
+    "三层": ["三层", "Level 3", "3F", "Third Floor"]
+  }
+}
