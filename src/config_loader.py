@@ -10,6 +10,7 @@ place that reads those files; later modules receive the validated
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -17,7 +18,7 @@ from typing import Any, Mapping
 
 import pandas as pd
 
-from src.schema import STANDARD_COLUMNS
+from src.schema import IFC_CLASSES, LEVELS, STANDARD_COLUMNS
 
 
 CONFIG_VERSION = "2.0"
@@ -51,6 +52,39 @@ ALLOWED_KEYS: dict[str, set[str]] = {
     },
     "quality_rules.json": {"config_version", "rules"},
 }
+
+TRACE_COLUMNS: tuple[str, ...] = (
+    "raw_unit",
+    "raw_row_number",
+    "source_file",
+    "exception_tags",
+)
+EXPECTED_CATEGORIES: tuple[str, ...] = (
+    "Beam",
+    "Column",
+    "Slab",
+    "Wall",
+    "Door",
+    "Window",
+)
+EXPECTED_MATERIALS: tuple[str, ...] = ("混凝土", "钢材", "木材", "玻璃", "铝合金")
+QUALITY_RULE_IDS: tuple[str, ...] = (
+    "missing_element_name",
+    "missing_type_name",
+    "missing_material",
+    "missing_level",
+    "missing_guid",
+    "duplicate_element_id",
+    "zero_quantity",
+    "negative_quantity",
+    "unknown_unit",
+    "invalid_name",
+    "missing_section_size",
+    "outlier_dimension",
+    "duplicate_guid",
+    "unmatched_unit_price",
+)
+QUALITY_SEVERITIES: frozenset[str] = frozenset({"Info", "Warning", "Error"})
 
 
 class ConfigError(ValueError):
@@ -161,12 +195,158 @@ def _validate_field_order(payload: Mapping[str, Any]) -> None:
             "field_mapping.json 的 field_order 必须是字符串列表；"
             "请按标准字段顺序填写。"
         )
-    expected = list(STANDARD_COLUMNS)
-    if field_order[: len(expected)] != expected:
+    expected = [*STANDARD_COLUMNS, *TRACE_COLUMNS]
+    if field_order != expected:
         raise ConfigError(
-            "field_mapping.json 的 field_order 必须以 STANDARD_COLUMNS 原顺序开头；"
-            "请修正字段顺序并保留全部标准字段。"
+            "field_mapping.json 的 field_order 必须完全等于 STANDARD_COLUMNS "
+            "后接 raw_unit、raw_row_number、source_file、exception_tags；"
+            "请修正字段顺序、重复项和字段数量。"
         )
+
+
+def _validate_alias_keys(
+    filename: str, aliases: Any, expected: tuple[str, ...]
+) -> None:
+    """Ensure a mapping's alias groups cover each canonical name exactly once."""
+
+    if not isinstance(aliases, dict):
+        raise ConfigError(f"{filename} 的 aliases 必须是对象；请按 canonical 名称分组。")
+    actual = set(aliases)
+    expected_set = set(expected)
+    if actual != expected_set:
+        unknown = "、".join(sorted(actual - expected_set)) or "无"
+        missing = "、".join(sorted(expected_set - actual)) or "无"
+        raise ConfigError(
+            f"{filename} 的 aliases canonical 键必须与规范列表完全一致；"
+            f"未知键：{unknown}，缺少键：{missing}。请修正 aliases。"
+        )
+
+
+def _validate_category_mapping(payload: Mapping[str, Any]) -> None:
+    canonical = payload["canonical_categories"]
+    if canonical != list(EXPECTED_CATEGORIES):
+        raise ConfigError(
+            "category_mapping.json 的 canonical_categories 必须严格为 "
+            "Beam、Column、Slab、Wall、Door、Window；请修正类别列表。"
+        )
+
+    mapping = payload["ifc_class_to_category"]
+    if not isinstance(mapping, dict) or set(mapping) != set(IFC_CLASSES):
+        actual = set(mapping) if isinstance(mapping, dict) else set()
+        unknown = "、".join(sorted(actual - set(IFC_CLASSES))) or "无"
+        missing = "、".join(sorted(set(IFC_CLASSES) - actual)) or "无"
+        raise ConfigError(
+            "category_mapping.json 的 IFC ifc_class_to_category 键必须与 schema.IFC_CLASSES "
+            f"完全一致；未知键：{unknown}，缺少键：{missing}。请修正 IFC 映射。"
+        )
+    expected_mapping = dict(zip(IFC_CLASSES, EXPECTED_CATEGORIES))
+    if mapping != expected_mapping:
+        raise ConfigError(
+            "category_mapping.json 的 IFC 映射必须按 IFC 类别一对一对应 "
+            "Beam/Column/Slab/Wall/Door/Window；请修正 ifc_class_to_category。"
+        )
+    _validate_alias_keys(
+        "category_mapping.json", payload["aliases"], EXPECTED_CATEGORIES
+    )
+
+
+def _validate_level_mapping(payload: Mapping[str, Any]) -> None:
+    if payload["canonical_levels"] != list(LEVELS):
+        raise ConfigError(
+            "level_mapping.json 的 canonical_levels 必须严格为 一层、二层、三层；"
+            "请修正楼层列表。"
+        )
+    _validate_alias_keys("level_mapping.json", payload["aliases"], LEVELS)
+
+
+def _validate_material_mapping(payload: Mapping[str, Any]) -> None:
+    if payload["canonical_materials"] != list(EXPECTED_MATERIALS):
+        raise ConfigError(
+            "material_mapping.json 的 canonical_materials 必须严格为 "
+            "混凝土、钢材、木材、玻璃、铝合金；请修正材料列表。"
+        )
+    _validate_alias_keys(
+        "material_mapping.json", payload["aliases"], EXPECTED_MATERIALS
+    )
+
+
+def _validate_naming_rules(payload: Mapping[str, Any]) -> None:
+    patterns = payload["allowed_patterns"]
+    if not isinstance(patterns, dict) or set(patterns) != set(IFC_CLASSES):
+        raise ConfigError(
+            "naming_rules.json 的 allowed_patterns 必须覆盖 IFC_CLASSES 且不能多或少；"
+            "请为每个 IFC 类别配置一个正则。"
+        )
+    for ifc_class in IFC_CLASSES:
+        pattern = patterns[ifc_class]
+        if not isinstance(pattern, str) or not pattern.strip():
+            raise ConfigError(
+                f"naming_rules.json 的 {ifc_class} 正则必须是非空字符串；请补充模式。"
+            )
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise ConfigError(
+                f"naming_rules.json 的 {ifc_class} 正则无法编译；请修正正则表达式。"
+            ) from exc
+
+    examples = payload["invalid_name_examples"]
+    if not isinstance(examples, list) or not examples or any(
+        not isinstance(example, str) or not example.strip() for example in examples
+    ):
+        raise ConfigError(
+            "naming_rules.json 的 invalid_name_examples 必须是非空字符串列表；"
+            "请删除空值。"
+        )
+    normalized = [example.strip() for example in examples]
+    if len(set(normalized)) != len(normalized):
+        raise ConfigError(
+            "naming_rules.json 的 invalid_name_examples 不能重复；请保留唯一示例。"
+        )
+
+
+def _validate_quality_rules(payload: Mapping[str, Any]) -> None:
+    rules = payload["rules"]
+    if not isinstance(rules, list) or len(rules) != len(QUALITY_RULE_IDS):
+        raise ConfigError(
+            "quality_rules.json 的 rules 必须包含恰好 14 条规则；请补齐或删除多余规则。"
+        )
+
+    expected_keys = {"id", "severity"}
+    for index, rule in enumerate(rules, start=1):
+        if not isinstance(rule, dict) or set(rule) != expected_keys:
+            raise ConfigError(
+                f"quality_rules.json 第 {index} 条规则必须只包含 id、severity 两个键；"
+                "请修正规则结构。"
+            )
+
+    ids = [rule["id"] for rule in rules]
+    if any(not isinstance(rule_id, str) or not rule_id.strip() for rule_id in ids):
+        raise ConfigError(
+            "quality_rules.json 的每个规则 id 必须是非空字符串；请修正规则 ID。"
+        )
+    if len(set(ids)) != len(ids):
+        raise ConfigError(
+            "quality_rules.json 含重复规则 id；请为每条规则保留唯一 ID。"
+        )
+    unknown = sorted(set(ids) - set(QUALITY_RULE_IDS))
+    missing = sorted(set(QUALITY_RULE_IDS) - set(ids))
+    if unknown or missing:
+        unknown_text = "、".join(unknown) or "无"
+        missing_text = "、".join(missing) or "无"
+        raise ConfigError(
+            "quality_rules.json 含未知或缺失规则 id；"
+            f"未知：{unknown_text}，缺少：{missing_text}。请使用计划中的 14 个 ID。"
+        )
+
+    for index, rule in enumerate(rules, start=1):
+        severity = rule["severity"]
+        if not isinstance(severity, str) or severity not in QUALITY_SEVERITIES:
+            allowed = "、".join(sorted(QUALITY_SEVERITIES))
+            raise ConfigError(
+                f"quality_rules.json 第 {index} 条规则的 severity={severity!r} 无效；"
+                f"只能使用 {allowed}。请修正严重程度。"
+            )
 
 
 def _load_unit_prices(config_dir: Path) -> pd.DataFrame:
@@ -230,8 +410,13 @@ def load_project_config(config_dir: Path) -> ProjectConfig:
     payloads = {
         filename: _load_json(directory / filename) for filename in JSON_FILES
     }
-    _assert_unique_aliases(payloads)
     _validate_field_order(payloads["field_mapping.json"])
+    _validate_category_mapping(payloads["category_mapping.json"])
+    _validate_level_mapping(payloads["level_mapping.json"])
+    _validate_material_mapping(payloads["material_mapping.json"])
+    _validate_naming_rules(payloads["naming_rules.json"])
+    _validate_quality_rules(payloads["quality_rules.json"])
+    _assert_unique_aliases(payloads)
     prices = _load_unit_prices(directory)
 
     return ProjectConfig(

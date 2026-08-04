@@ -1,6 +1,7 @@
 import json
 import shutil
 from pathlib import Path
+from typing import Any, Callable
 
 import pandas as pd
 import pytest
@@ -187,6 +188,201 @@ def test_loader_rejects_non_numeric_unit_price(repo_config_dir: Path, tmp_path: 
     frame.loc[0, "unit_price"] = "not-a-number"
     frame.to_csv(path, index=False)
     with pytest.raises(ConfigError, match="unit_price.*正数"):
+        load_project_config(bad_dir)
+
+
+def _copied_config_dir(repo_config_dir: Path, tmp_path: Path) -> Path:
+    """Return an isolated config tree for one negative-loader test."""
+
+    bad_dir = tmp_path / "configs"
+    shutil.copytree(repo_config_dir, bad_dir)
+    return bad_dir
+
+
+def _edit_json(
+    config_dir: Path, filename: str, edit: Callable[[dict[str, Any]], None]
+) -> None:
+    path = config_dir / filename
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    edit(payload)
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def test_loader_rejects_duplicate_field_order(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "field_mapping.json",
+        lambda payload: payload["field_order"].__setitem__(
+            -1, payload["field_order"][-2]
+        ),
+    )
+    with pytest.raises(ConfigError, match="field_mapping.json.*field_order.*完全等于"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_extra_field_order_entry(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "field_mapping.json",
+        lambda payload: payload["field_order"].append("unexpected"),
+    )
+    with pytest.raises(ConfigError, match="field_mapping.json.*field_order.*完全等于"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_missing_field_order_entry(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "field_mapping.json",
+        lambda payload: payload["field_order"].pop(),
+    )
+    with pytest.raises(ConfigError, match="field_mapping.json.*field_order.*完全等于"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_category_canonical(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "category_mapping.json",
+        lambda payload: payload["canonical_categories"].__setitem__(0, "Bogus"),
+    )
+    with pytest.raises(ConfigError, match="category_mapping.json.*canonical_categories"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_ifc_mapping_key(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["ifc_class_to_category"]["IfcUnknown"] = "Beam"
+
+    _edit_json(bad_dir, "category_mapping.json", edit)
+    with pytest.raises(ConfigError, match="category_mapping.json.*IFC"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_ifc_mapping_value(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["ifc_class_to_category"]["IfcBeam"] = "Column"
+
+    _edit_json(bad_dir, "category_mapping.json", edit)
+    with pytest.raises(ConfigError, match="category_mapping.json.*一对一"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_category_alias_key(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["aliases"]["Girder"] = payload["aliases"].pop("Beam")
+
+    _edit_json(bad_dir, "category_mapping.json", edit)
+    with pytest.raises(ConfigError, match="category_mapping.json.*aliases"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_level_canonical(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "level_mapping.json",
+        lambda payload: payload["canonical_levels"].__setitem__(2, "四层"),
+    )
+    with pytest.raises(ConfigError, match="level_mapping.json.*canonical_levels"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_level_alias_key(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["aliases"]["四层"] = payload["aliases"].pop("一层")
+
+    _edit_json(bad_dir, "level_mapping.json", edit)
+    with pytest.raises(ConfigError, match="level_mapping.json.*aliases"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_material_canonical(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "material_mapping.json",
+        lambda payload: payload["canonical_materials"].append("塑料"),
+    )
+    with pytest.raises(ConfigError, match="material_mapping.json.*canonical_materials"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_material_alias_key(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["aliases"]["塑料"] = payload["aliases"].pop("钢材")
+
+    _edit_json(bad_dir, "material_mapping.json", edit)
+    with pytest.raises(ConfigError, match="material_mapping.json.*aliases"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_invalid_naming_regex(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "naming_rules.json",
+        lambda payload: payload["allowed_patterns"].__setitem__("IfcBeam", "["),
+    )
+    with pytest.raises(ConfigError, match="naming_rules.json.*正则"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_empty_invalid_name_example(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "naming_rules.json",
+        lambda payload: payload["invalid_name_examples"].clear(),
+    )
+    with pytest.raises(ConfigError, match="naming_rules.json.*invalid_name_examples"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_bogus_quality_severity(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+    _edit_json(
+        bad_dir,
+        "quality_rules.json",
+        lambda payload: payload["rules"][0].__setitem__("severity", "Bogus"),
+    )
+    with pytest.raises(ConfigError, match="quality_rules.json.*severity"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_duplicate_quality_rule_id(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["rules"][1]["id"] = payload["rules"][0]["id"]
+
+    _edit_json(bad_dir, "quality_rules.json", edit)
+    with pytest.raises(ConfigError, match="quality_rules.json.*重复.*id"):
+        load_project_config(bad_dir)
+
+
+def test_loader_rejects_unknown_quality_rule_id(repo_config_dir: Path, tmp_path: Path):
+    bad_dir = _copied_config_dir(repo_config_dir, tmp_path)
+
+    def edit(payload):
+        payload["rules"][0]["id"] = "not_a_planned_rule"
+
+    _edit_json(bad_dir, "quality_rules.json", edit)
+    with pytest.raises(ConfigError, match="quality_rules.json.*未知.*id"):
         load_project_config(bad_dir)
 
 
