@@ -136,4 +136,3 @@ def validate_standard_dataframe(frame: pd.DataFrame) -> SchemaValidationResult:
         invalid_enum_values=invalid,
         messages=messages,
     )
-

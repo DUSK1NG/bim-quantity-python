@@ -30,4 +30,3 @@ Install `requirements-ifc.txt` only when the later IFC adapter work is needed.
 
 Sample prices and generated rows, when added in a later task, are teaching
 examples only and are not suitable for formal construction estimating.
-

@@ -6,4 +6,3 @@ pytest>=8,<10
 openpyxl>=3.1,<4.0
 plotly>=5.18,<7.0
 streamlit>=1.30,<2.0
-
