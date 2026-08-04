@@ -157,3 +157,34 @@ def test_generator_result_counts_are_diagnostics_not_csv_ground_truth(generated_
     )
     assert generated_sample.exception_counts["duplicate_guid_groups"] == 2
     assert "exception_tags" in frame.columns
+
+
+def test_sample_document_contains_exact_disclaimer_and_exception_counts():
+    text = (Path(__file__).parents[1] / "data" / "sample" / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert "程序演示数据" in text
+    assert "缺失材料 5 条" in text
+    assert "缺失楼层 3 条" in text
+    assert "重复 GUID 2 组" in text
+    assert "体积为零 4 条" in text
+    assert "名称不符合规则 3 条" in text
+    assert "单位异常 2 条" in text
+    assert "单价无法匹配 2 条" in text
+    assert "本项目单价为教学示例数据，不用于正式工程造价。" in text
+
+
+def test_phase_two_sample_and_docs_are_relative_path_safe():
+    root = Path(__file__).parents[1]
+    for path in (
+        root / "README.md",
+        root / "data" / "sample" / "README.md",
+        root / "docs" / "data_dictionary.md",
+        root / "docs" / "technical_route.md",
+        root / "assets" / "README.md",
+    ):
+        text = path.read_text(encoding="utf-8")
+        assert "C:\\Users\\" not in text
+        assert "C:/Users/" not in text
+        assert "TODO" not in text
+        assert "TBD" not in text

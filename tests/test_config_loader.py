@@ -199,3 +199,75 @@ def test_loader_rejects_duplicate_unit_price_key(repo_config_dir: Path, tmp_path
     frame.to_csv(path, index=False)
     with pytest.raises(ConfigError, match="重复 category/material/unit"):
         load_project_config(bad_dir)
+
+
+def test_phase_two_outputs_and_docs_exist():
+    """The checked-in foundation has every Phase 2 artifact and no later module."""
+
+    root = Path(__file__).parents[1]
+    required = [
+        root / "README.md",
+        root / "requirements.txt",
+        root / "requirements-ifc.txt",
+        root / "pyproject.toml",
+        root / "src" / "schema.py",
+        root / "src" / "config_loader.py",
+        root / "scripts" / "generate_sample_data.py",
+        root / "data" / "sample" / "README.md",
+        root / "docs" / "data_dictionary.md",
+        root / "docs" / "technical_route.md",
+        root / "assets" / "README.md",
+        root / "data" / "raw" / ".gitkeep",
+        root / "data" / "processed" / ".gitkeep",
+        root / "outputs" / "excel" / ".gitkeep",
+        root / "outputs" / "charts" / ".gitkeep",
+        root / "outputs" / "reports" / ".gitkeep",
+    ]
+    assert all(path.is_file() for path in required)
+
+    forbidden = [
+        root / "src" / "csv_reader.py",
+        root / "src" / "data_cleaner.py",
+        root / "src" / "quantity_calculator.py",
+        root / "src" / "cost_calculator.py",
+        root / "src" / "quality_checker.py",
+        root / "src" / "validation.py",
+        root / "src" / "report_generator.py",
+        root / "src" / "pipeline.py",
+        root / "src" / "ifc_reader.py",
+        root / "app" / "streamlit_app.py",
+        root / "scripts" / "run_pipeline.py",
+        root / "scripts" / "export_report.py",
+    ]
+    assert all(not path.exists() for path in forbidden)
+
+
+def test_root_readme_describes_current_phase_two_capabilities():
+    """README must expose the delivered generator and defer later modules."""
+
+    text = (Path(__file__).parents[1] / "README.md").read_text(encoding="utf-8")
+    assert "Python 3.10/3.11" in text
+    assert "Windows 10/11" in text
+    assert "scripts/generate_sample_data.py" in text
+    assert "-m pytest -q" in text
+    assert "20260804" in text
+    assert "240" in text
+    for label in (
+        "一层",
+        "二层",
+        "三层",
+        "IfcBeam",
+        "IfcColumn",
+        "IfcSlab",
+        "IfcWall",
+        "IfcDoor",
+        "IfcWindow",
+    ):
+        assert label in text
+    assert "程序演示数据" in text
+    assert "本项目单价为教学示例数据，不用于正式工程造价。" in text
+    assert "CSV reader" in text
+    assert "Streamlit" in text
+    assert "IFC reader" in text
+    assert "planned for Task 3" not in text
+    assert "not available in this task" not in text
