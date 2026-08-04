@@ -1,0 +1,9 @@
+# Core tabular processing and tests
+pandas>=2.2,<3.0
+pytest>=8,<10
+
+# Reserved for later report and dashboard tasks
+openpyxl>=3.1,<4.0
+plotly>=5.18,<7.0
+streamlit>=1.30,<2.0
+
