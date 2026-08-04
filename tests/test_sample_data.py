@@ -48,6 +48,20 @@ def test_seeded_generation_is_240_rows_and_reproducible(tmp_path: Path):
     assert first.manual_validation_path.read_bytes() == second.manual_validation_path.read_bytes()
 
 
+def test_custom_output_directories_emit_stable_relative_source_file(tmp_path: Path):
+    first = generate_sample_data(tmp_path / "one", CONFIG_DIR)
+    second = generate_sample_data(tmp_path / "two", CONFIG_DIR)
+
+    for result in (first, second):
+        frame = _read_elements(result.elements_path)
+        assert frame["source_file"].eq(result.elements_path.name).all()
+        assert frame["source_file"].eq("sample_elements.csv").all()
+        assert not frame["source_file"].str.contains(r"[\\/]").any()
+        assert not frame["source_file"].map(Path).map(Path.is_absolute).any()
+
+    assert first.elements_path.read_bytes() == second.elements_path.read_bytes()
+
+
 def test_sample_has_contract_columns_and_required_coverage(generated_sample):
     frame = _read_elements(generated_sample.elements_path)
 

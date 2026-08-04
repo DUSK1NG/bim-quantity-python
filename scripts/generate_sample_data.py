@@ -29,7 +29,6 @@ from src.schema import STANDARD_COLUMNS, UNITS, SampleDataSpec
 
 LOGGER = logging.getLogger(__name__)
 DISCLAIMER = "本项目单价为教学示例数据，不用于正式工程造价。"
-SOURCE_FILE = "data/sample/sample_elements.csv"
 EXTRA_COLUMNS = ("raw_unit", "raw_row_number", "source_file", "exception_tags")
 EXPECTED_FIELD_COUNT = len(STANDARD_COLUMNS) + len(EXTRA_COLUMNS)
 
@@ -75,7 +74,9 @@ def _first_price_row(config: ProjectConfig, category: str, unit: str) -> pd.Seri
     return candidates.iloc[0]
 
 
-def _base_rows(spec: SampleDataSpec, config: ProjectConfig) -> pd.DataFrame:
+def _base_rows(
+    spec: SampleDataSpec, config: ProjectConfig, source_file: str
+) -> pd.DataFrame:
     """Build ordinary rows before applying the deliberately bad rows."""
 
     rng = random.Random(spec.seed)
@@ -120,7 +121,7 @@ def _base_rows(spec: SampleDataSpec, config: ProjectConfig) -> pd.DataFrame:
                 "quality_status": "Pass",
                 "raw_unit": unit,
                 "raw_row_number": index + 2,
-                "source_file": SOURCE_FILE,
+                "source_file": source_file,
                 "exception_tags": "",
             }
         )
@@ -213,11 +214,11 @@ def generate_sample_data(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    frame = _base_rows(spec, config)
+    elements_path = output_dir / "sample_elements.csv"
+    frame = _base_rows(spec, config, elements_path.name)
     _inject_exceptions(frame)
     _fill_prices(frame, config)
 
-    elements_path = output_dir / "sample_elements.csv"
     frame.to_csv(elements_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     manual = frame.iloc[::20][["guid", "ifc_class", "level", "quantity"]].copy()
