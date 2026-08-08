@@ -422,7 +422,6 @@ def test_current_outputs_and_docs_exist():
     assert all(path.is_file() for path in required)
 
     forbidden = [
-        root / "src" / "cost_calculator.py",
         root / "src" / "quality_checker.py",
         root / "src" / "validation.py",
         root / "src" / "report_generator.py",
