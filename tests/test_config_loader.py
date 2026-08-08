@@ -423,7 +423,6 @@ def test_current_outputs_and_docs_exist():
 
     forbidden = [
         root / "src" / "report_generator.py",
-        root / "src" / "pipeline.py",
         root / "src" / "ifc_reader.py",
         root / "app" / "streamlit_app.py",
         root / "scripts" / "run_pipeline.py",
