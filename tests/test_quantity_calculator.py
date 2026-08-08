@@ -174,3 +174,46 @@ def test_calculation_does_not_mutate_input_dataframe(config):
     assert result.frame is not frame
     assert result.calculation_notes
     assert isinstance(result.calculation_notes, tuple)
+
+
+def test_sparse_input_is_padded_and_emitted_in_configured_field_order(config):
+    calculator = _calculator_module()
+    frame = pd.DataFrame(
+        {
+            "volume_m3": [1.25, pd.NA],
+            "category": ["Column", "Beam"],
+            "length_m": [pd.NA, 2.0],
+        }
+    )
+
+    result = calculator.calculate_quantities(frame, config).frame
+
+    expected_columns = tuple(config.field_mapping["field_order"])
+    assert tuple(result.columns) == expected_columns
+    assert len(result) == len(frame)
+    assert result["quantity"].tolist() == pytest.approx([1.25, 2.0])
+    assert result["unit"].tolist() == ["m³", "m"]
+    assert result["quantity_source"].tolist() == [
+        "Parameter Calculation",
+        "Parameter Calculation",
+    ]
+    missing_columns = {
+        "element_id",
+        "guid",
+        "source",
+        "ifc_class",
+        "element_name",
+        "type_name",
+        "level",
+        "material",
+        "area_m2",
+        "unit_price",
+        "total_cost",
+        "quality_status",
+        "raw_unit",
+        "raw_row_number",
+        "source_file",
+        "exception_tags",
+    }
+    for column in missing_columns:
+        assert result[column].isna().all()

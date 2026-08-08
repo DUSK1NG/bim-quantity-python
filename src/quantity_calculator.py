@@ -148,6 +148,15 @@ def calculate_quantities(frame: pd.DataFrame, config: ProjectConfig) -> Quantity
     result["quantity"] = quantities
     result["unit"] = units
     result["quantity_source"] = sources
+
+    # Emit the validated project contract in its configured order.  Any
+    # caller-provided extra columns are retained after the standard fields.
+    field_order = tuple(config.field_mapping["field_order"])
+    for column in field_order:
+        if column not in result.columns:
+            result[column] = pd.NA
+    extra_columns = [column for column in result.columns if column not in field_order]
+    result = result.loc[:, [*field_order, *extra_columns]]
     return QuantityResult(frame=result, calculation_notes=_CALCULATION_NOTES)
 
 
