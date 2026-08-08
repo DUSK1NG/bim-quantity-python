@@ -1,4 +1,4 @@
-# BIM 工程量基础工程（阶段 2）
+# BIM 工程量基础工程（阶段 3.1）
 
 这是一个面向本科生的 BIM 工程量基础工程，采用路线 A：先以 CSV 样例固定数据契约，再逐步扩展后续流程。当前阶段支持 Windows 10/11 与 Python 3.10/3.11。
 
@@ -59,11 +59,21 @@ conda create --prefix "$ProjectRoot\.venv" python=3.11 -y
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-测试覆盖 schema、七个显式配置、固定种子输出、字段顺序、覆盖范围、异常数量、单价匹配、人工复核样例和阶段边界。
+测试覆盖 schema、七个显式配置、固定种子输出、字段顺序、CSV reader、data cleaner、质量报告、覆盖范围、异常数量、单价匹配、人工复核样例和阶段边界。
+
+## 运行阶段 3.1 清洗闭环
+
+从仓库根目录运行 CSV reader 与 data cleaner：
+
+```powershell
+.venv\python.exe scripts\clean_sample_data.py --input data\sample\sample_elements.csv --output-dir data\processed --report-dir outputs\reports --config-dir configs
+```
+
+命令会生成 `data/processed/sample_elements_clean.csv` 和 `outputs/reports/sample_elements_quality_report.json`。清洗不会删除问题行；质量报告记录原始行号、规则计数、严重级别和不适用规则。报告中的金额仅为教学示例。
 
 ## 当前范围与后续边界
 
-当前只交付 schema、配置加载器、确定性样例生成器、样例 CSV、测试和基础文档。以下模块尚未实现，当前命令不会调用它们：
+当前已交付 schema、配置加载器、确定性样例生成器、样例 CSV、CSV reader、data cleaner、质量报告 CLI、测试和基础文档。以下模块尚未实现，当前命令不会调用它们：
 
 - CSV reader 与 data cleaner；
 - 工程量/造价计算器、质量检查器、人工误差分析和 pipeline；
