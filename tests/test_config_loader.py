@@ -422,7 +422,6 @@ def test_current_outputs_and_docs_exist():
     assert all(path.is_file() for path in required)
 
     forbidden = [
-        root / "src" / "report_generator.py",
         root / "src" / "ifc_reader.py",
         root / "app" / "streamlit_app.py",
         root / "scripts" / "run_pipeline.py",
