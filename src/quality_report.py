@@ -90,9 +90,9 @@ def _issue_sort_key(issue: QualityIssue) -> tuple[Any, str, str, str]:
     source_file = _json_value(issue.source_file)
     return (
         issue.raw_row_number,
-        "" if source_file is None else _basename(source_file),
         issue.rule_id,
         issue.field,
+        "" if source_file is None else _basename(source_file),
     )
 
 
