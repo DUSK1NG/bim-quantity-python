@@ -397,8 +397,8 @@ def test_loader_rejects_duplicate_unit_price_key(repo_config_dir: Path, tmp_path
         load_project_config(bad_dir)
 
 
-def test_phase_two_outputs_and_docs_exist():
-    """The checked-in foundation has every Phase 2 artifact and no later module."""
+def test_current_outputs_and_docs_exist():
+    """The checked-in foundation has current artifacts and no later module."""
 
     root = Path(__file__).parents[1]
     required = [
@@ -422,8 +422,6 @@ def test_phase_two_outputs_and_docs_exist():
     assert all(path.is_file() for path in required)
 
     forbidden = [
-        root / "src" / "csv_reader.py",
-        root / "src" / "data_cleaner.py",
         root / "src" / "quantity_calculator.py",
         root / "src" / "cost_calculator.py",
         root / "src" / "quality_checker.py",
