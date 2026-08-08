@@ -11,6 +11,32 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+### Windows PowerShell：Conda prefix `.venv`
+
+如果使用 Conda prefix 重建环境，请在仓库根目录执行下面的命令。`$ProjectRoot` 从当前项目的相对路径 `.` 解析得到；Conda prefix 环境的解释器位于 `.venv\python.exe`，不需要 `conda activate`：
+
+```powershell
+$ProjectRoot = (Resolve-Path ".").Path
+conda create --prefix "$ProjectRoot\.venv" python=3.11 -y
+& ".\.venv\python.exe" -m pip install --upgrade pip
+& ".\.venv\python.exe" -m pip install -r (Join-Path $ProjectRoot "requirements.txt")
+& ".\.venv\python.exe" -m pip check
+& ".\.venv\python.exe" scripts/generate_sample_data.py --seed 20260804 --rows 240 --config-dir configs --output-dir data/sample
+& ".\.venv\python.exe" -m pytest -q
+```
+
+需要核对解释器及已安装库版本时，可运行下面的诊断示例。版本属性必须写成 `numpy.__version__` 与 `pandas.__version__`；`numpy.**version**` 和 `pandas.**version**` 是错误语法。NumPy 不是本项目的直接依赖，若环境中未安装它，跳过 NumPy 检查即可：
+
+```powershell
+& ".\.venv\python.exe" -c "import sys, pandas; print(sys.version); print('pandas', pandas.__version__); import numpy; print('numpy', numpy.__version__)"
+```
+
+若受限环境的默认临时目录权限失败，可给 pytest 增加 `--basetemp=.pytest_cache\audit`：
+
+```powershell
+& ".\.venv\python.exe" -m pytest -q --basetemp=.pytest_cache\audit
+```
+
 基础安装不包含 IfcOpenShell。只有在后续选择 IFC 适配器阶段时，才按需安装可选依赖：
 
 ```powershell
