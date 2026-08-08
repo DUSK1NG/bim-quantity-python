@@ -91,12 +91,35 @@ conda create --prefix "$ProjectRoot\.venv" python=3.11 -y
 .venv\python.exe scripts\clean_sample_data.py --input data\sample\sample_elements.csv --output-dir data\processed --report-dir outputs\reports --config-dir configs
 ```
 
+## 阶段 3.3 Pipeline 与报表导出
+
+阶段 3.3 将 CSV reader、清洗、工程量、教学单价、质量检查和人工复核串成同一条 `src.pipeline.run_pipeline` 流程。两个专用 CLI 只负责参数、输出和退出码，不在入口中重复计算规则。可从仓库根目录运行：
+
+```powershell
+.venv\python.exe scripts\run_pipeline.py --input data\sample\sample_elements.csv --config-dir configs --manual data\sample\sample_manual_validation.csv --output-dir outputs\pipeline
+.venv\python.exe scripts\export_report.py --input data\sample\sample_elements.csv --config-dir configs --manual data\sample\sample_manual_validation.csv --output-dir outputs\reports
+```
+
+`run_pipeline.py` 会在指定目录写出中间标准明细 `sample_elements_standard.csv`、质量报告 `sample_elements_quality_report.json` 和示例造价汇总 `sample_elements_summary.csv`。`export_report.py` 会写出 `sample_elements_report.xlsx` 以及六个 UTF-8-SIG CSV：`_details`、`_by_level`、`_by_category`、`_by_material`、`_cost_summary` 和 `_quality_issues`。所有来源追溯字段只保留输入文件名，不写入本机绝对路径。
+
+Excel 固定包含以下 8 个工作表，顺序保持不变：
+
+1. `项目概览`
+2. `全部构件明细`
+3. `分楼层工程量`
+4. `分构件工程量`
+5. `分材料工程量`
+6. `示例造价汇总`
+7. `数据质量问题`
+8. `人工复核结果`
+
+退出码为：`0` 表示完成且没有 `Error` 质量问题，`2` 表示文件已生成但存在 `Error`，`1` 表示输入、配置或写出失败。金额、误差和报表仅用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
+
 ## 当前范围与后续边界
 
-当前已交付 schema、配置加载器、确定性样例生成器、样例 CSV、CSV reader、data cleaner、阶段 3.2 工程量/造价/质量/人工复核模块、质量报告 CLI、测试和基础文档。以下模块尚未实现，当前命令不会调用它们：
+当前已交付 schema、配置加载器、确定性样例生成器、样例 CSV、CSV reader、data cleaner、阶段 3.2 工程量/造价/质量/人工复核模块、阶段 3.3 Pipeline 与 Excel/CSV 报表 CLI、测试和基础文档。以下边界仍未实现，当前命令不会调用它们：
 
-- pipeline 编排与统一报告导出；
-- Streamlit 页面与图表导出；
+- Streamlit 页面与 Plotly 图表导出；
 - IFC reader（IfcOpenShell 仅作为后续可选适配器依赖）。
 
 后续阶段必须复用本阶段的标准字段、配置接口和可追溯约定；人工复核结果需要有 BIM 经验的人员解释，不能把样例金额、误差摘要或质量状态当作正式工程造价、验收结论或真实项目精度证明。
