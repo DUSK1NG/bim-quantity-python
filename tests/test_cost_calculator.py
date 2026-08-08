@@ -165,6 +165,69 @@ def test_calculation_does_not_mutate_input_and_preserves_rows(config):
     assert result.frame["extra"].tolist() == ["keep", "also-keep"]
 
 
+def test_sparse_input_is_padded_and_emitted_in_configured_field_order(config):
+    calculator = _calculator_module()
+    frame = pd.DataFrame(
+        {
+            "extra": ["keep"],
+            "quantity": [2.0],
+            "raw_row_number": [66],
+            "material": ["混凝土"],
+            "unit": ["m³"],
+            "category": ["Beam"],
+        }
+    )
+
+    result = calculator.calculate_costs(frame, config)
+
+    expected_fields = tuple(config.field_mapping["field_order"])
+    assert tuple(result.frame.columns) == (*expected_fields, "extra")
+    assert len(result.frame) == 1
+    assert result.frame.loc[0, "quantity"] == pytest.approx(2.0)
+    assert result.frame.loc[0, "unit_price"] == pytest.approx(520.0)
+    assert result.frame.loc[0, "total_cost"] == pytest.approx(1040.0)
+    assert result.frame.loc[0, "extra"] == "keep"
+
+    missing_fields = set(expected_fields) - {
+        "category",
+        "material",
+        "unit",
+        "quantity",
+        "raw_row_number",
+        "unit_price",
+        "total_cost",
+    }
+    for column in missing_fields:
+        assert pd.isna(result.frame.loc[0, column])
+
+
+def test_total_cost_overflow_keeps_cost_fields_missing(config):
+    calculator = _calculator_module()
+    prices = config.unit_prices.copy(deep=True)
+    price_match = (
+        prices["category"].eq("Beam")
+        & prices["material"].eq("混凝土")
+        & prices["unit"].eq("m³")
+    )
+    prices.loc[price_match, "unit_price"] = 1e308
+    overflow_config = replace(config, unit_prices=prices)
+    frame = pd.DataFrame(
+        {
+            "category": ["Beam"],
+            "material": ["混凝土"],
+            "unit": ["m³"],
+            "quantity": [1e308],
+            "raw_row_number": [88],
+        }
+    )
+
+    result = calculator.calculate_costs(frame, overflow_config)
+
+    assert pd.isna(result.frame.loc[0, "unit_price"])
+    assert pd.isna(result.frame.loc[0, "total_cost"])
+    assert result.unmatched_rows == (88,)
+
+
 def test_result_is_frozen_and_exports_shared_disclaimer_constant(config):
     calculator = _calculator_module()
     frame = pd.DataFrame(

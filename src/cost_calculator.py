@@ -184,11 +184,28 @@ def calculate_costs(frame: pd.DataFrame, config: ProjectConfig) -> CostResult:
             unmatched.append(_raw_row_number(row, position))
             continue
 
+        try:
+            total = quantity * unit_price
+        except (OverflowError, TypeError):
+            total = math.nan
+        if not math.isfinite(total) or total < 0:
+            matched_prices.append(None)
+            totals.append(None)
+            unmatched.append(_raw_row_number(row, position))
+            continue
+
         matched_prices.append(unit_price)
-        totals.append(quantity * unit_price)
+        totals.append(total)
 
     result["unit_price"] = pd.Series(matched_prices, index=result.index, dtype="Float64")
     result["total_cost"] = pd.Series(totals, index=result.index, dtype="Float64")
+
+    field_order = tuple(config.field_mapping["field_order"])
+    for column in field_order:
+        if column not in result.columns:
+            result[column] = pd.NA
+    extra_columns = [column for column in result.columns if column not in field_order]
+    result = result.loc[:, [*field_order, *extra_columns]]
     return CostResult(frame=result, unmatched_rows=tuple(unmatched))
 
 
