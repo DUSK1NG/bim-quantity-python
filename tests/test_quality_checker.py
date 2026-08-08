@@ -172,3 +172,56 @@ def test_checker_issue_sort_is_stable_by_raw_row_rule_and_field(config):
 
     keys = [(issue.raw_row_number, issue.rule_id, issue.field) for issue in result.issues]
     assert keys == sorted(keys)
+
+
+def test_checker_injects_row_trace_fields_and_counts_mixed_sources_separately(config):
+    checker = _checker_module()
+    rows = [_valid_row(301), _valid_row(301)]
+    rows[0]["source_file"] = r"C:\imports\first.csv"
+    rows[0]["guid"] = "GUID-FIRST"
+    rows[0]["element_name"] = pd.NA
+    rows[1]["source_file"] = r"D:\imports\second.csv"
+    rows[1]["guid"] = "GUID-SECOND"
+    rows[1]["type_name"] = pd.NA
+
+    result = checker.check_quality(pd.DataFrame(rows), config)
+    by_rule = {issue.rule_id: issue for issue in result.issues}
+
+    assert result.issue_rows == 2
+    assert by_rule["missing_element_name"].source_file == "first.csv"
+    assert by_rule["missing_element_name"].guid == "GUID-FIRST"
+    assert by_rule["missing_element_name"].element_name is None
+    assert by_rule["missing_element_name"].type_name == "Beam-Standard"
+    assert by_rule["missing_element_name"].level == "一层"
+    assert by_rule["missing_element_name"].suggestion == "建议补充构件名称"
+    assert by_rule["missing_type_name"].source_file == "second.csv"
+    assert by_rule["missing_type_name"].guid == "GUID-SECOND"
+
+
+def test_checker_invalid_config_severity_falls_back_to_warning(config):
+    checker = _checker_module()
+    for rule in config.quality_rules["rules"]:
+        if rule["id"] == "missing_element_name":
+            rule["severity"] = "Bogus"
+            break
+
+    row = _valid_row(401)
+    row["element_name"] = pd.NA
+    result = checker.check_quality(pd.DataFrame([row]), config)
+    issue = next(issue for issue in result.issues if issue.rule_id == "missing_element_name")
+
+    assert issue.severity == "Warning"
+    assert all(issue.severity in {"Info", "Warning", "Error"} for issue in result.issues)
+
+
+def test_checker_not_applicable_rules_keep_fixed_order_when_config_order_changes(config):
+    checker = _checker_module()
+    rules = config.quality_rules["rules"]
+    rules[:] = list(reversed(rules))
+
+    result = checker.check_quality(pd.DataFrame([_valid_row(402)]), config)
+
+    assert result.not_applicable_rules == (
+        "missing_section_size",
+        "outlier_dimension",
+    )

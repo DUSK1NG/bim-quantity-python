@@ -16,12 +16,14 @@ from typing import Any
 import pandas as pd
 
 from src.config_loader import ProjectConfig
-from src.quality_report import QualityIssue, QualityReport
+from src.quality_report import (
+    ALLOWED_SEVERITIES,
+    NOT_APPLICABLE_RULES,
+    QualityIssue,
+    QualityReport,
+)
 from src.schema import UNITS
 
-
-_SEVERITY_RANK = {"Info": 1, "Warning": 2, "Error": 3}
-_NOT_APPLICABLE = frozenset({"missing_section_size", "outlier_dimension"})
 
 # Explanations and repair suggestions deliberately live beside the checker,
 # not in field/category mapping configuration.  The rule IDs and severities
@@ -75,6 +77,16 @@ def _row_number(row: pd.Series, position: int) -> int:
         if math.isfinite(number) and number.is_integer():
             return int(number)
     return position + 1
+
+
+def _trace_value(value: Any, *, source_file: bool = False) -> Any:
+    """Return a JSON-safe row trace value, reducing source paths to basenames."""
+
+    if _is_missing(value):
+        return None
+    if source_file:
+        return str(value).replace("\\", "/").rsplit("/", 1)[-1]
+    return value
 
 
 def _nonempty_mask(series: pd.Series) -> pd.Series:
@@ -166,7 +178,8 @@ def _severity_map(config: ProjectConfig) -> tuple[dict[str, str], tuple[str, ...
         if not rule_id:
             continue
         rule_ids.append(rule_id)
-        severity[rule_id] = str(spec.get("severity", "Warning"))
+        configured = str(spec.get("severity", "Warning"))
+        severity[rule_id] = configured if configured in ALLOWED_SEVERITIES else "Warning"
     return severity, tuple(rule_ids)
 
 
@@ -188,8 +201,6 @@ def check_quality(frame: pd.DataFrame, config: ProjectConfig) -> QualityReport:
     # A validated ProjectConfig always contains all 14 IDs.  Keeping the
     # implementation tolerant of a hand-built config makes the checker easier
     # to use in focused tests while preserving config-driven severities.
-    unsupported = tuple(rule_id for rule_id in configured_ids if rule_id in _NOT_APPLICABLE)
-
     issues: list[QualityIssue] = []
 
     def add(position: int, row: pd.Series, rule_id: str, field: str) -> None:
@@ -205,6 +216,12 @@ def check_quality(frame: pd.DataFrame, config: ProjectConfig) -> QualityReport:
                 severity=level,
                 field=field,
                 message=f"{explanation}；{suggestion}",
+                source_file=_trace_value(row.get("source_file"), source_file=True),
+                guid=_trace_value(row.get("guid")),
+                element_name=_trace_value(row.get("element_name")),
+                type_name=_trace_value(row.get("type_name")),
+                level=_trace_value(row.get("level")),
+                suggestion=suggestion,
             )
         )
 
@@ -310,17 +327,24 @@ def check_quality(frame: pd.DataFrame, config: ProjectConfig) -> QualityReport:
         counts_by_rule[issue.rule_id] = counts_by_rule.get(issue.rule_id, 0) + 1
         counts_by_severity[issue.severity] = counts_by_severity.get(issue.severity, 0) + 1
 
-    issue_rows = len({issue.raw_row_number for issue in issues})
+    issue_rows = len(
+        {
+            (
+                _trace_value(issue.source_file, source_file=True) or "",
+                issue.raw_row_number,
+            )
+            for issue in issues
+        }
+    )
     return QualityReport(
         total_rows=len(frame),
         issue_rows=issue_rows,
         clean_rows=len(frame) - issue_rows,
         counts_by_rule=counts_by_rule,
         counts_by_severity=counts_by_severity,
-        not_applicable_rules=unsupported,
+        not_applicable_rules=NOT_APPLICABLE_RULES,
         issues=tuple(issues),
     )
 
 
 __all__ = ["check_quality"]
-

@@ -30,6 +30,48 @@ def _report(*issues: QualityIssue, total_rows: int = 4) -> QualityReport:
     )
 
 
+def test_quality_issue_keeps_old_five_argument_constructor_and_accepts_trace_fields() -> None:
+    legacy = QualityIssue(1, "missing_level", "Warning", "level", "缺失楼层")
+    assert legacy.source_file is None
+    assert legacy.guid is None
+    assert legacy.element_name is None
+    assert legacy.type_name is None
+    assert legacy.level is None
+    assert legacy.suggestion is None
+
+    issue = QualityIssue(
+        7,
+        "missing_level",
+        "Warning",
+        "level",
+        "缺失楼层；建议补充标准楼层",
+        source_file=r"C:\imports\trace.csv",
+        guid="GUID-7",
+        element_name="梁-AA-007",
+        type_name="Beam-Standard",
+        level=None,
+        suggestion="建议补充标准楼层",
+    )
+    payload = quality_report_to_dict(_report(issue), r"C:\reports\report.json")
+
+    serialized = payload["issues"][0]
+    assert serialized["source_file"] == "trace.csv"
+    assert serialized["guid"] == "GUID-7"
+    assert serialized["element_name"] == "梁-AA-007"
+    assert serialized["type_name"] == "Beam-Standard"
+    assert serialized["level"] is None
+    assert serialized["suggestion"] == "建议补充标准楼层"
+
+
+def test_quality_report_serializes_not_applicable_rules_in_contract_order() -> None:
+    payload = quality_report_to_dict(_report(), "report.json")
+
+    assert payload["not_applicable_rules"] == [
+        "missing_section_size",
+        "outlier_dimension",
+    ]
+
+
 def test_quality_report_serializes_stable_counts_and_disclaimer(tmp_path: Path) -> None:
     issues = (
         QualityIssue(2, "missing_level", "Warning", "level", "缺失楼层"),
@@ -49,7 +91,7 @@ def test_quality_report_serializes_stable_counts_and_disclaimer(tmp_path: Path) 
     assert payload["counts_by_rule"] == {"missing_level": 2, "unknown_unit": 1}
     assert list(payload["counts_by_severity"]) == ["Error", "Warning"]
     assert payload["counts_by_severity"] == {"Error": 1, "Warning": 2}
-    assert payload["not_applicable_rules"] == ["outlier_dimension", "missing_section_size"]
+    assert payload["not_applicable_rules"] == ["missing_section_size", "outlier_dimension"]
     assert payload["disclaimer"] == "本项目单价为教学示例数据，不用于正式工程造价。"
 
 
