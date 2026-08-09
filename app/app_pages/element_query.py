@@ -27,7 +27,14 @@ else:
     query = st.sidebar.text_input("名称、ID、GUID 或 IFC 类别", value="")
     category = st.sidebar.selectbox("构件类型", ["全部", *_options(elements, "category")])
     level = st.sidebar.selectbox("楼层", ["全部", *_options(elements, "level")])
-    filtered = filter_elements(elements, query=query, category=category, level=level)
+    material = st.sidebar.selectbox("材料", ["全部", *_options(elements, "material")])
+    filtered = filter_elements(
+        elements,
+        query=query,
+        category=category,
+        level=level,
+        material=material,
+    )
 
     st.metric("匹配构件数", len(filtered))
     if filtered.empty:

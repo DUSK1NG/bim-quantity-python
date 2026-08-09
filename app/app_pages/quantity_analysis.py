@@ -8,6 +8,7 @@ from app.app_pages._common import filter_summary
 from app.utils.charts import (
     fig_concrete_volume_by_level,
     fig_cost_distribution,
+    fig_elements_by_level,
     fig_material_usage,
     fig_quantity_share_by_category,
 )
@@ -67,14 +68,15 @@ else:
 
     first, second = st.columns(2)
     with first:
-        st.plotly_chart(fig_concrete_volume_by_level(filtered_level))
+        st.plotly_chart(fig_elements_by_level(filtered_level))
     with second:
-        st.plotly_chart(fig_quantity_share_by_category(filtered_category))
+        st.plotly_chart(fig_concrete_volume_by_level(filtered_level))
     first, second = st.columns(2)
     with first:
-        st.plotly_chart(fig_material_usage(filtered_material))
+        st.plotly_chart(fig_quantity_share_by_category(filtered_category))
     with second:
-        st.plotly_chart(fig_cost_distribution(filtered_cost))
+        st.plotly_chart(fig_material_usage(filtered_material))
+    st.plotly_chart(fig_cost_distribution(filtered_cost))
 
     st.subheader("筛选后的楼层汇总")
     st.dataframe(filtered_level, hide_index=True)

@@ -66,6 +66,7 @@ def filter_elements(
     query: str = "",
     category: Any = "全部",
     level: Any = "全部",
+    material: Any = "全部",
 ) -> pd.DataFrame:
     """Filter element rows by free-text query and optional group values."""
 
@@ -74,11 +75,19 @@ def filter_elements(
     selected = frame.copy(deep=True)
     mask = _isin(selected, "category", _values((category,)))
     mask &= _isin(selected, "level", _values((level,)))
+    mask &= _isin(selected, "material", _values((material,)))
     text = str(query or "").strip()
     if text:
         searchable = [
             column
-            for column in ("element_id", "guid", "element_name", "type_name", "ifc_class")
+            for column in (
+                "element_id",
+                "guid",
+                "element_name",
+                "type_name",
+                "ifc_class",
+                "material",
+            )
             if column in selected.columns
         ]
         if not searchable:
