@@ -141,9 +141,18 @@ def test_bad_upload_shows_chinese_error_without_traceback() -> None:
     assert any("数据加载失败" in item.value for item in app.error)
 
 
-def test_ifc_selector_shows_optional_upload_and_actionable_missing_dependency() -> None:
+def test_ifc_selector_shows_optional_upload_and_actionable_missing_dependency(
+    monkeypatch,
+) -> None:
     """IFC selection is visible and missing optional dependency stays user-facing."""
 
+    from app.utils import data as data_module
+    from src.ifc_reader import IfcReaderUnavailable
+
+    def unavailable(path, config):
+        raise IfcReaderUnavailable("请安装 requirements-ifc.txt")
+
+    monkeypatch.setattr(data_module, "read_ifc", unavailable)
     app = AppTest.from_file(str(ROOT / "app" / "streamlit_app.py")).run(timeout=60)
     app.radio[0].set_value("IFC").run(timeout=60)
 
