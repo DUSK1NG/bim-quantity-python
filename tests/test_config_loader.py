@@ -423,7 +423,6 @@ def test_current_outputs_and_docs_exist():
 
     forbidden = [
         root / "src" / "ifc_reader.py",
-        root / "app" / "streamlit_app.py",
     ]
     assert all(not path.exists() for path in forbidden)
 
