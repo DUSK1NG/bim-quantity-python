@@ -88,4 +88,3 @@ def six_supported_entities() -> list[FakeEntity]:
             )
         )
     return entities
-

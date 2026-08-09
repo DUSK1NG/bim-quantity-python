@@ -20,4 +20,3 @@
 ## Concern
 
 未使用真实 IfcOpenShell 或二进制 IFC smoke；测试只依赖 fake object protocol，这是可选依赖边界的预期限制。
-

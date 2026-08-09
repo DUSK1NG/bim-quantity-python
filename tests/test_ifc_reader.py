@@ -130,4 +130,3 @@ def test_bad_quantities_and_malformed_entity_do_not_stop_remaining_rows(
     assert result.frame.loc[result.frame["guid"].eq("G-COLUMN"), "quantity"].isna().all()
     assert any(item.startswith("Warning: ") for item in result.diagnostics)
     assert result.frame["raw_row_number"].tolist() == list(range(1, 8))
-
