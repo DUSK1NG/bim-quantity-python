@@ -43,6 +43,17 @@ conda create --prefix "$ProjectRoot\.venv" python=3.11 -y
 .venv\Scripts\python.exe -m pip install -r requirements-ifc.txt
 ```
 
+CSV 仍是默认输入；IFC 检查是可选的独立命令，必须先安装
+`requirements-ifc.txt` 中的 IfcOpenShell。命令只导出 IFC 标准明细和读取诊断，
+不会改变 CSV 主流程：
+
+```powershell
+.venv\Scripts\python.exe scripts\inspect_ifc.py --input model.ifc --config-dir configs --output-dir outputs\ifc
+```
+
+成功后会在输出目录写入 `<文件名>_ifc_elements.csv`（UTF-8-SIG）和
+`<文件名>_ifc_diagnostics.json`。若读取依赖缺失或输入、配置、输出失败，命令会给出中文修复提示并返回退出码 1。
+
 ## 生成固定种子样例
 
 ```powershell
@@ -129,10 +140,10 @@ Excel 固定包含以下 8 个工作表，顺序保持不变：
 
 入口支持上传构件明细 CSV 和可选人工复核 CSV；加载后可在六个页面之间切换：项目概览、工程量分析、构件查询、数据质量检查、误差分析、报表导出。工程量分析页提供七类 Plotly 图表，报表导出页提供 Excel 和六个 UTF-8-SIG CSV 下载。页面只编排既有 PipelineArtifacts，不在界面层复制计算规则。
 
-当前仅支持 CSV 输入；IFC reader 尚未启用，界面会明确提示“IFC 直接读取暂不可用”，不会伪造 IFC 支持。上传数据、图表、金额和误差均用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
+Streamlit 上传入口仍仅支持 CSV；可选 IFC reader 不在界面中直接读取，可按上面的独立命令检查。上传数据、图表、金额和误差均用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
 
 以下边界仍未实现，当前命令不会调用它们：
 
-- IFC reader（IfcOpenShell 仅作为后续可选适配器依赖）。
+- Streamlit 中的 IFC 上传接入（IfcOpenShell 适配器目前由独立 CLI 提供）。
 
 后续阶段必须复用本阶段的标准字段、配置接口和可追溯约定；人工复核结果需要有 BIM 经验的人员解释，不能把样例金额、误差摘要或质量状态当作正式工程造价、验收结论或真实项目精度证明。
