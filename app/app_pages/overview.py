@@ -12,8 +12,8 @@ st.title("项目概览")
 artifacts = st.session_state.get("artifacts")
 
 if artifacts is None:
-    st.info("请先在应用入口上传 CSV 并完成数据处理，然后返回本页查看项目概览。")
-    st.warning("当前版本仅支持 CSV 数据；IFC 直接读取暂不可用，请先导出构件明细 CSV。")
+    st.info("请先在应用入口选择 CSV 或 IFC 并完成数据处理，然后返回本页查看项目概览。")
+    st.warning("当前支持 CSV 和可选 IFC；请选择输入类型并完成加载后查看项目概览。")
     st.caption(DISCLAIMER)
 else:
     overview = dict(artifacts.overview or {})

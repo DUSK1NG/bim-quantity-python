@@ -159,3 +159,23 @@ def test_ifc_dependency_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(data_module, "read_ifc", unavailable)
     with pytest.raises(DataLoadError, match="requirements-ifc|CSV"):
         data_module.load_artifacts_from_ifc_bytes(b"bad", "model.ifc", CONFIG_DIR)
+
+
+def test_ifc_error_diagnostic_is_not_silently_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reader Error diagnostics become a user-facing loader error."""
+
+    frame = pd.read_csv(SAMPLE, encoding="utf-8-sig")
+    frame["source"] = "IFC"
+    frame["source_file"] = "model.ifc"
+    frame["raw_row_number"] = range(1, len(frame) + 1)
+
+    class FakeResult:
+        def __init__(self):
+            self.frame = frame
+            self.diagnostics = ("Error: 实体提取失败",)
+
+    monkeypatch.setattr(data_module, "read_ifc", lambda path, config: FakeResult())
+    with pytest.raises(DataLoadError, match="IFC 数据读取存在错误"):
+        data_module.load_artifacts_from_ifc_bytes(b"IFC", "model.ifc", CONFIG_DIR)

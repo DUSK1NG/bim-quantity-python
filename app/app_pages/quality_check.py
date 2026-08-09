@@ -34,8 +34,8 @@ st.title("数据质量检查")
 artifacts = st.session_state.get("artifacts")
 
 if artifacts is None:
-    st.info("请先上传 CSV 并完成数据处理，再查看质量规则结果。")
-    st.warning("当前版本仅支持 CSV 数据；IFC 直接读取暂不可用。")
+    st.info("请先选择 CSV 或 IFC 并完成数据处理，再查看质量规则结果。")
+    st.warning("当前支持 CSV 和可选 IFC；请选择输入类型并完成加载后检查质量。")
     st.caption(DISCLAIMER)
 else:
     report = artifacts.quality_report

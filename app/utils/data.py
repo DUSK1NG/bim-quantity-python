@@ -134,6 +134,14 @@ def _load_ifc_artifacts_cached(
             config_path = Path(config_dir)
             config = load_project_config(config_path)
             result = read_ifc(input_path, config)
+            error_diagnostics = tuple(
+                item for item in result.diagnostics if str(item).startswith("Error:")
+            )
+            if error_diagnostics:
+                detail = "；".join(str(item) for item in error_diagnostics[:3])
+                raise DataLoadError(
+                    f"IFC 数据读取存在错误：{detail}；请检查 IFC 文件和模型属性后重试。"
+                )
             if result.frame.empty and result.diagnostics:
                 raise DataLoadError("IFC 文件没有可读取的六类构件；请检查模型和 IFC 版本。")
 

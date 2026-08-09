@@ -26,8 +26,8 @@ st.title("工程量分析")
 artifacts = st.session_state.get("artifacts")
 
 if artifacts is None:
-    st.info("请先上传 CSV 并完成数据处理，再查看工程量分析。")
-    st.warning("当前版本仅支持 CSV 数据；IFC 直接读取暂不可用。")
+    st.info("请先选择 CSV 或 IFC 并完成数据处理，再查看工程量分析。")
+    st.warning("当前支持 CSV 和可选 IFC；请选择输入类型并完成加载后查看工程量。")
     st.caption(DISCLAIMER)
 else:
     by_level = artifacts.by_level

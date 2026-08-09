@@ -15,8 +15,8 @@ st.title("报表导出")
 artifacts = st.session_state.get("artifacts")
 
 if artifacts is None:
-    st.info("请先上传 CSV 并完成数据处理，再生成 Excel 或 CSV 报表。")
-    st.warning("当前版本仅支持 CSV 数据；IFC 直接读取暂不可用。")
+    st.info("请先选择 CSV 或 IFC 并完成数据处理，再生成 Excel 或 CSV 报表。")
+    st.warning("当前支持 CSV 和可选 IFC；请选择输入类型并完成加载后导出报表。")
     st.caption(DISCLAIMER)
 else:
     source_stem = Path(artifacts.source_file).stem or "bim_quantity_report"
