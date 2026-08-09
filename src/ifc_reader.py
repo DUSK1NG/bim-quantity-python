@@ -447,17 +447,6 @@ def _normalise_unit(value: Any) -> str | None:
     return _UNIT_ALIASES.get(normalised)
 
 
-def _default_unit(category: Any) -> str | None:
-    return {
-        "Beam": "m",
-        "Column": "m³",
-        "Slab": "m³",
-        "Wall": "m³",
-        "Door": "樘",
-        "Window": "樘",
-    }.get(category)
-
-
 def _extract_quantities(
     entity: Any,
     info: Mapping[str, Any],
@@ -505,11 +494,25 @@ def _extract_quantities(
             f"Warning: 实体序号 {row_number} 的 IFC 单位无法识别；数量保留缺失值。"
         )
         result["unit"] = _MISSING
-        result["quantity"] = _MISSING
+        for column in (*_QUANTITY_KEYS, "unit"):
+            result[column] = _MISSING
     else:
         if unit is None:
-            unit = _default_unit(category)
-        result["unit"] = unit if unit is not None else _MISSING
+            has_base_values = any(
+                not _is_missing(result[column]) for column in _QUANTITY_KEYS
+            )
+            if has_base_values:
+                tags.append("missing_unit")
+                diagnostics.append(
+                    f"Warning: 实体序号 {row_number} 缺少 IFC Base Quantity 单位；"
+                    "相关工程量保留缺失值。"
+                )
+                for column in (*_QUANTITY_KEYS, "unit"):
+                    result[column] = _MISSING
+            else:
+                result["unit"] = _MISSING
+        else:
+            result["unit"] = unit
     if not _is_missing(result["quantity"]) and not _is_missing(result["unit"]):
         result["quantity_source"] = "IFC BaseQuantity"
     else:
@@ -697,6 +700,7 @@ def read_ifc(path: Path, config: ProjectConfig) -> IfcReadResult:
                         "ifc_class": ifc_class,
                         "raw_row_number": row_number,
                         "source_file": file_name,
+                        "quantity_source": "Missing",
                         "exception_tags": "entity_error",
                         "quality_status": "Error",
                     }

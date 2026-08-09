@@ -13,6 +13,8 @@
 - GREEN：reader 专项 `6 passed`；全量 `142 passed`。
 - 依赖与格式：`pip check` 输出 `No broken requirements found.`；`git diff --check` 无错误。
 
+第二轮契约修复同样遵循 TDD：缺失单位与未知单位回归先得到 2 个预期失败，异常实体 fallback 回归先因 `pd.NA` 失败；修复后 reader 专项为 `9 passed`，全量为 `145 passed`。无单位或无法识别单位不再按类别猜测，所有受影响的 SI 工程量与 `quantity_source` 保持缺失；异常实体保留行明确标记 `quantity_source=Missing`。
+
 ## 诊断与边界
 
 诊断统一使用 `Error: `、`Warning: `Info: ` 前缀。未知 IFC 类、缺失 GUID/楼层、坏 Base Quantity、未知单位和多材料会保留可追溯行并记录 warning；文件路径、依赖缺失、打开失败转换为中文 reader 异常。模型在 `finally` 中调用可用的 `close`/`release`/`dispose`。

@@ -130,3 +130,80 @@ def test_bad_quantities_and_malformed_entity_do_not_stop_remaining_rows(
     assert result.frame.loc[result.frame["guid"].eq("G-COLUMN"), "quantity"].isna().all()
     assert any(item.startswith("Warning: ") for item in result.diagnostics)
     assert result.frame["raw_row_number"].tolist() == list(range(1, 8))
+
+
+def test_base_quantity_without_explicit_unit_stays_missing(
+    tmp_path: Path, config: ProjectConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A category name must not silently invent a unit for IFC quantities."""
+
+    reader = _reader_module()
+    entity = six_supported_entities()[0]
+    entity.Unit = None
+    entity._attrs["Unit"] = None
+    fake_module, _model = make_fake_module([entity])
+    monkeypatch.setitem(sys.modules, "ifcopenshell", fake_module)
+    model_path = tmp_path / "unitless.ifc"
+    model_path.write_text("IFC", encoding="utf-8")
+
+    result = reader.read_ifc(model_path, config)
+    row = result.frame.iloc[0]
+
+    assert pd.isna(row["unit"])
+    assert pd.isna(row["quantity"])
+    assert row["quantity_source"] == "Missing"
+    assert any("单位" in item for item in result.diagnostics)
+
+
+def test_unknown_base_quantity_unit_does_not_leak_unconverted_values(
+    tmp_path: Path, config: ProjectConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown units keep raw provenance but clear every affected SI value."""
+
+    reader = _reader_module()
+    entity = six_supported_entities()[0]
+    entity.Unit = "ft"
+    fake_module, _model = make_fake_module([entity])
+    monkeypatch.setitem(sys.modules, "ifcopenshell", fake_module)
+    model_path = tmp_path / "unknown-unit.ifc"
+    model_path.write_text("IFC", encoding="utf-8")
+
+    result = reader.read_ifc(model_path, config)
+    row = result.frame.iloc[0]
+
+    assert row["raw_unit"] == "ft"
+    assert pd.isna(row["unit"])
+    for column in ("length_m", "area_m2", "volume_m3", "quantity"):
+        assert pd.isna(row[column]), column
+    assert row["quantity_source"] == "Missing"
+    assert any(item.startswith("Warning: ") and "单位" in item for item in result.diagnostics)
+
+
+def test_entity_extraction_fallback_marks_quantity_source_missing(
+    tmp_path: Path, config: ProjectConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A row retained after an extraction exception cannot claim IFC quantity."""
+
+    class ExplodingEntity:
+        def is_a(self, name: str | None = None):
+            return "IfcBeam" if name is None else name == "IfcBeam"
+
+        def get_info(self):
+            raise RuntimeError("malformed fake entity")
+
+        @property
+        def GlobalId(self):
+            raise RuntimeError("malformed fake entity")
+
+    reader = _reader_module()
+    fake_module, _model = make_fake_module([ExplodingEntity()])
+    monkeypatch.setitem(sys.modules, "ifcopenshell", fake_module)
+    model_path = tmp_path / "malformed.ifc"
+    model_path.write_text("IFC", encoding="utf-8")
+
+    result = reader.read_ifc(model_path, config)
+    row = result.frame.iloc[0]
+
+    assert row["quantity_source"] == "Missing"
+    assert row["quality_status"] == "Error"
+    assert any(item.startswith("Error: ") for item in result.diagnostics)
