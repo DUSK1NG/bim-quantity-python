@@ -231,4 +231,3 @@ git commit -m "feat: document streamlit dashboard"
 - 四项任务覆盖七类图表、缓存数据、六页导航、AppTest、上传/筛选/下载和中文文档。
 - 页面不复制业务规则；IFC 不在本阶段伪造支持；无自定义 CSS、旧多页面 API 或废弃参数。
 - 所有测试步骤有明确 RED、GREEN、全量回归和提交边界；计划不含未完成占位词和绝对用户路径。
-

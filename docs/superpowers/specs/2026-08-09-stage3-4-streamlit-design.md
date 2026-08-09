@@ -103,4 +103,3 @@ fig_validation_error(validation_result)
 - 阶段末运行全量 pytest、`pip check`、Streamlit AppTest、Plotly 图表测试、两个报表 CLI 和 `git diff --check`。
 
 阶段 3.4 的可视化只展示程序演示与教学数据，单价和误差不代表正式工程造价、结算、验收或真实项目精度。
-
