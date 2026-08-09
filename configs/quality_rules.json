@@ -1,0 +1,19 @@
+{
+  "config_version": "2.0",
+  "rules": [
+    {"id": "missing_element_name", "severity": "Error"},
+    {"id": "missing_type_name", "severity": "Error"},
+    {"id": "missing_material", "severity": "Warning"},
+    {"id": "missing_level", "severity": "Warning"},
+    {"id": "missing_guid", "severity": "Error"},
+    {"id": "duplicate_element_id", "severity": "Warning"},
+    {"id": "zero_quantity", "severity": "Warning"},
+    {"id": "negative_quantity", "severity": "Error"},
+    {"id": "unknown_unit", "severity": "Error"},
+    {"id": "invalid_name", "severity": "Warning"},
+    {"id": "missing_section_size", "severity": "Warning"},
+    {"id": "outlier_dimension", "severity": "Warning"},
+    {"id": "duplicate_guid", "severity": "Error"},
+    {"id": "unmatched_unit_price", "severity": "Warning"}
+  ]
+}

@@ -1,0 +1,28 @@
+# Python bytecode and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments and secrets
+.superpowers/
+.venv/
+venv/
+env/
+.env
+*.env.local
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Generated project outputs (keep directory placeholders in version control)
+outputs/**
+!outputs/**/
+!outputs/**/.gitkeep
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep

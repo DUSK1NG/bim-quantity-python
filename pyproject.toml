@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bim-quantity-python"
+version = "0.2.0"
+description = "Beginner-readable BIM quantity schema and validation foundation"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "pandas>=2.2,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+]
+reports = [
+    "openpyxl>=3.1,<4.0",
+    "plotly>=5.18,<7.0",
+    "streamlit>=1.30,<2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

@@ -1,0 +1,20 @@
+{
+  "config_version": "2.0",
+  "canonical_categories": ["Beam", "Column", "Slab", "Wall", "Door", "Window"],
+  "ifc_class_to_category": {
+    "IfcBeam": "Beam",
+    "IfcColumn": "Column",
+    "IfcSlab": "Slab",
+    "IfcWall": "Wall",
+    "IfcDoor": "Door",
+    "IfcWindow": "Window"
+  },
+  "aliases": {
+    "Beam": ["IfcBeam", "梁", "Beam"],
+    "Column": ["IfcColumn", "柱", "Column"],
+    "Slab": ["IfcSlab", "板", "Slab"],
+    "Wall": ["IfcWall", "墙", "Wall"],
+    "Door": ["IfcDoor", "门", "Door"],
+    "Window": ["IfcWindow", "窗", "Window"]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "config_version": "2.0",
+  "aliases": {
+    "element_id": ["构件ID", "Element ID", "element_id"],
+    "guid": ["全局唯一标识", "GUID"],
+    "level": ["楼层", "Level"],
+    "category": ["类别", "Category"],
+    "element_name": ["族名称", "Element Name", "element_name"],
+    "type_name": ["类型", "Type Name", "type_name"],
+    "length_m": ["长度", "Length", "length_m"],
+    "area_m2": ["面积", "Area", "area_m2"],
+    "volume_m3": ["体积", "Volume", "volume_m3"],
+    "quantity": ["数量", "Quantity"],
+    "unit": ["单位", "Unit"],
+    "material": ["材料", "Material"]
+  },
+  "field_order": [
+    "element_id", "guid", "source", "ifc_class", "category", "element_name",
+    "type_name", "level", "material", "length_m", "area_m2", "volume_m3",
+    "quantity", "unit", "unit_price", "total_cost", "quantity_source", "quality_status",
+    "raw_unit", "raw_row_number", "source_file", "exception_tags"
+  ]
+}
