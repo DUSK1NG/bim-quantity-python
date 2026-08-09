@@ -117,9 +117,22 @@ Excel 固定包含以下 8 个工作表，顺序保持不变：
 
 ## 当前范围与后续边界
 
-当前已交付 schema、配置加载器、确定性样例生成器、样例 CSV、CSV reader、data cleaner、阶段 3.2 工程量/造价/质量/人工复核模块、阶段 3.3 Pipeline 与 Excel/CSV 报表 CLI、测试和基础文档。以下边界仍未实现，当前命令不会调用它们：
+当前已交付 schema、配置加载器、确定性样例生成器、样例 CSV、CSV reader、data cleaner、阶段 3.2 工程量/造价/质量/人工复核模块、阶段 3.3 Pipeline 与 Excel/CSV 报表 CLI，以及阶段 3.4 的 Plotly 图表和 Streamlit 六页界面。
 
-- Streamlit 页面与 Plotly 图表导出；
+## 阶段 3.4 Streamlit 看板
+
+从仓库根目录启动中文 Streamlit 应用：
+
+```powershell
+.venv\python.exe -m streamlit run app\streamlit_app.py
+```
+
+入口支持上传构件明细 CSV 和可选人工复核 CSV；加载后可在六个页面之间切换：项目概览、工程量分析、构件查询、数据质量检查、误差分析、报表导出。工程量分析页提供七类 Plotly 图表，报表导出页提供 Excel 和六个 UTF-8-SIG CSV 下载。页面只编排既有 PipelineArtifacts，不在界面层复制计算规则。
+
+当前仅支持 CSV 输入；IFC reader 尚未启用，界面会明确提示“IFC 直接读取暂不可用”，不会伪造 IFC 支持。上传数据、图表、金额和误差均用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
+
+以下边界仍未实现，当前命令不会调用它们：
+
 - IFC reader（IfcOpenShell 仅作为后续可选适配器依赖）。
 
 后续阶段必须复用本阶段的标准字段、配置接口和可追溯约定；人工复核结果需要有 BIM 经验的人员解释，不能把样例金额、误差摘要或质量状态当作正式工程造价、验收结论或真实项目精度证明。
