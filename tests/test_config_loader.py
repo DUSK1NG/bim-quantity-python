@@ -421,10 +421,8 @@ def test_current_outputs_and_docs_exist():
     ]
     assert all(path.is_file() for path in required)
 
-    forbidden = [
-        root / "src" / "ifc_reader.py",
-    ]
-    assert all(not path.exists() for path in forbidden)
+    # IFC support is optional and now lives behind a lazy reader boundary;
+    # its presence must not make the Phase 2 foundation import IfcOpenShell.
 
 
 def test_root_readme_describes_current_phase_two_capabilities():
