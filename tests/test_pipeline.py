@@ -115,3 +115,73 @@ def test_run_pipeline_wraps_configuration_errors_as_pipeline_error(tmp_path: Pat
         pipeline.run_pipeline(SAMPLE, missing_config)
 
     assert "Pipeline" in str(exc_info.value)
+
+
+def test_run_pipeline_from_frame_returns_full_ifc_artifacts_and_traceability() -> None:
+    """A standard IFC frame follows the same pipeline and keeps source metadata."""
+
+    pipeline = _pipeline_module()
+    raw_frame = pd.read_csv(SAMPLE, encoding="utf-8-sig")
+    raw_frame["source"] = "IFC"
+    raw_frame["source_file"] = "uploaded-model.ifc"
+
+    artifacts = pipeline.run_pipeline_from_frame(
+        raw_frame,
+        CONFIG_DIR,
+        source_file=r"C:\\uploads\\uploaded-model.ifc",
+    )
+
+    assert isinstance(artifacts, pipeline.PipelineArtifacts)
+    assert artifacts.standard_frame.shape == (240, 22)
+    assert artifacts.standard_frame["source"].eq("IFC").all()
+    assert artifacts.standard_frame["source_file"].eq("uploaded-model.ifc").all()
+    assert artifacts.source_file == "uploaded-model.ifc"
+    assert artifacts.overview["source_file"] == "uploaded-model.ifc"
+    assert not artifacts.by_level.empty
+    assert not artifacts.by_category.empty
+    assert not artifacts.by_material.empty
+    assert not artifacts.cost_summary.empty
+    assert isinstance(artifacts.validation_result, pipeline.ValidationResult)
+
+
+def test_run_pipeline_from_frame_rejects_missing_standard_columns() -> None:
+    """DataFrame entry rejects frames that do not satisfy STANDARD_COLUMNS."""
+
+    pipeline = _pipeline_module()
+    raw_frame = pd.read_csv(SAMPLE, encoding="utf-8-sig").drop(columns=["guid"])
+
+    with pytest.raises(pipeline.PipelineError, match="标准列|guid") as exc_info:
+        pipeline.run_pipeline_from_frame(raw_frame, CONFIG_DIR, source_file="model.ifc")
+
+    assert "guid" in str(exc_info.value)
+
+
+def test_run_pipeline_from_frame_preserves_ifc_source_trace() -> None:
+    """IFC reader frames use the shared pipeline without CSV source rewriting."""
+
+    pipeline = _pipeline_module()
+    frame = pd.read_csv(SAMPLE, encoding="utf-8-sig")
+    frame["source"] = "IFC"
+    frame["source_file"] = "teaching-model.ifc"
+    frame["raw_row_number"] = range(1, len(frame) + 1)
+
+    artifacts = pipeline.run_pipeline_from_frame(
+        frame, CONFIG_DIR, "teaching-model.ifc"
+    )
+
+    assert artifacts.standard_frame.shape == (240, 22)
+    assert set(artifacts.standard_frame["source"].dropna()) == {"IFC"}
+    assert set(artifacts.standard_frame["source_file"].dropna()) == {
+        "teaching-model.ifc"
+    }
+    assert artifacts.source_file == "teaching-model.ifc"
+
+
+def test_run_pipeline_from_frame_rejects_missing_standard_column() -> None:
+    """The DataFrame boundary reports missing schema columns instead of guessing."""
+
+    pipeline = _pipeline_module()
+    frame = pd.DataFrame({"guid": ["G-1"], "source": ["IFC"]})
+
+    with pytest.raises(pipeline.PipelineError, match="标准列|缺少"):
+        pipeline.run_pipeline_from_frame(frame, CONFIG_DIR, "bad.ifc")

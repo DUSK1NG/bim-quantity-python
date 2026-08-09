@@ -22,6 +22,7 @@ from src.data_cleaner import clean_elements
 from src.quality_checker import check_quality
 from src.quality_report import DISCLAIMER, QualityReport
 from src.quantity_calculator import calculate_quantities
+from src.schema import STANDARD_COLUMNS
 from src.validation import ValidationResult, validate_manual_results
 
 
@@ -71,20 +72,25 @@ def _empty_manual_frame() -> pd.DataFrame:
     return pd.DataFrame(columns=["guid", "manual_quantity"])
 
 
-def run_pipeline(
-    input_path: Path,
+def run_pipeline_from_frame(
+    raw_frame: pd.DataFrame,
     config_dir: Path,
-    manual_path: Path | None = None,
+    source_file: str,
+    manual_frame: pd.DataFrame | None = None,
 ) -> PipelineArtifacts:
-    """Run reader, cleaner, calculators, quality checks and aggregations."""
+    """Run the shared pipeline on an already-read CSV or IFC DataFrame."""
 
-    source_path = Path(input_path)
+    if not isinstance(raw_frame, pd.DataFrame):
+        raise PipelineError("Pipeline 输入必须是 pandas DataFrame；请检查 reader 输出。")
+    missing = [column for column in STANDARD_COLUMNS if column not in raw_frame.columns]
+    if missing:
+        names = "、".join(missing)
+        raise PipelineError(f"Pipeline 输入缺少标准列：{names}；请检查 reader 输出。")
+
+    source_name = Path(str(source_file or "")).name or "uploaded.ifc"
     config_path = Path(config_dir)
-    manual_file = Path(manual_path) if manual_path is not None else None
-
     config = _stage("配置加载", lambda: load_project_config(config_path))
-    raw_frame = _stage("CSV 读取", lambda: read_elements_csv(source_path))
-    cleaned = _stage("数据清洗", lambda: clean_elements(raw_frame, config))
+    cleaned = _stage("数据清洗", lambda: clean_elements(raw_frame.copy(deep=True), config))
     quantities = _stage(
         "工程量计算", lambda: calculate_quantities(cleaned.frame, config)
     )
@@ -95,21 +101,22 @@ def run_pipeline(
         "质量检查", lambda: check_quality(standard_frame, config)
     )
 
-    if manual_file is None:
-        manual_frame = _empty_manual_frame()
+    if manual_frame is None:
+        manual_input = _empty_manual_frame()
+    elif isinstance(manual_frame, pd.DataFrame):
+        manual_input = manual_frame.copy(deep=True)
     else:
-        manual_frame = _stage("人工复核表读取", lambda: _read_manual(manual_file))
+        raise PipelineError("人工复核输入必须是 pandas DataFrame；请检查上传内容。")
     validation_result = _stage(
-        "人工复核", lambda: validate_manual_results(standard_frame, manual_frame)
+        "人工复核", lambda: validate_manual_results(standard_frame, manual_input)
     )
 
     by_level = _stage("楼层汇总", lambda: summarize_by_level(standard_frame))
     by_category = _stage("类别汇总", lambda: summarize_by_category(standard_frame))
     by_material = _stage("材料汇总", lambda: summarize_by_material(standard_frame))
     cost_summary = _stage("造价汇总", lambda: summarize_costs(standard_frame))
-    source_file = source_path.name
     overview = _stage(
-        "项目概览", lambda: build_overview(standard_frame, quality_report, source_file)
+        "项目概览", lambda: build_overview(standard_frame, quality_report, source_name)
     )
 
     return PipelineArtifacts(
@@ -121,9 +128,33 @@ def run_pipeline(
         by_category=by_category,
         by_material=by_material,
         cost_summary=cost_summary,
-        source_file=source_file,
+        source_file=source_name,
         disclaimer=DISCLAIMER,
     )
 
 
-__all__ = ["PipelineArtifacts", "PipelineError", "run_pipeline"]
+def run_pipeline(
+    input_path: Path,
+    config_dir: Path,
+    manual_path: Path | None = None,
+) -> PipelineArtifacts:
+    """Run reader, cleaner, calculators, quality checks and aggregations."""
+
+    source_path = Path(input_path)
+    config_path = Path(config_dir)
+    manual_file = Path(manual_path) if manual_path is not None else None
+    raw_frame = _stage("CSV 读取", lambda: read_elements_csv(source_path))
+    if manual_file is None:
+        manual_frame = None
+    else:
+        manual_frame = _stage("人工复核表读取", lambda: _read_manual(manual_file))
+
+    return run_pipeline_from_frame(raw_frame, config_path, source_path.name, manual_frame)
+
+
+__all__ = [
+    "PipelineArtifacts",
+    "PipelineError",
+    "run_pipeline",
+    "run_pipeline_from_frame",
+]
