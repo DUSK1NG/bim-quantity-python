@@ -123,3 +123,39 @@ def test_invalid_bytes_raise_chinese_repair_hint() -> None:
         )
 
     assert "请" in str(exc_info.value)
+
+
+def test_ifc_bytes_use_reader_and_preserve_ifc_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IFC bytes enter the shared pipeline without being relabeled as CSV."""
+
+    frame = pd.read_csv(SAMPLE, encoding="utf-8-sig")
+    frame["source"] = "IFC"
+    frame["source_file"] = "teaching-model.ifc"
+    frame["raw_row_number"] = range(1, len(frame) + 1)
+
+    class FakeResult:
+        def __init__(self):
+            self.frame = frame
+            self.diagnostics = ()
+
+    monkeypatch.setattr(data_module, "read_ifc", lambda path, config: FakeResult())
+    artifacts = data_module.load_artifacts_from_ifc_bytes(
+        b"IFC-DATA", "nested/teaching-model.ifc", CONFIG_DIR
+    )
+
+    assert artifacts.source_file == "teaching-model.ifc"
+    assert artifacts.standard_frame["source"].eq("IFC").all()
+    assert artifacts.standard_frame["source_file"].eq("teaching-model.ifc").all()
+
+
+def test_ifc_dependency_error_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing optional dependency is reported without a traceback."""
+
+    from src.ifc_reader import IfcReaderUnavailable
+
+    def unavailable(path, config):
+        raise IfcReaderUnavailable("请安装 requirements-ifc.txt")
+
+    monkeypatch.setattr(data_module, "read_ifc", unavailable)
+    with pytest.raises(DataLoadError, match="requirements-ifc|CSV"):
+        data_module.load_artifacts_from_ifc_bytes(b"bad", "model.ifc", CONFIG_DIR)

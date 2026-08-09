@@ -139,3 +139,22 @@ def test_bad_upload_shows_chinese_error_without_traceback() -> None:
 
     assert not app.exception
     assert any("数据加载失败" in item.value for item in app.error)
+
+
+def test_ifc_selector_shows_optional_upload_and_actionable_missing_dependency() -> None:
+    """IFC selection is visible and missing optional dependency stays user-facing."""
+
+    app = AppTest.from_file(str(ROOT / "app" / "streamlit_app.py")).run(timeout=60)
+    app.radio[0].set_value("IFC").run(timeout=60)
+
+    assert not app.exception
+    assert app.file_uploader[0].label == "IFC 模型"
+    app.file_uploader[0].upload("model.ifc", b"not-an-ifc", "application/octet-stream").run(
+        timeout=60
+    )
+    app.button[0].click().run(timeout=60)
+
+    assert not app.exception
+    assert any(
+        "requirements-ifc" in item.value or "IFC" in item.value for item in app.error
+    )

@@ -140,10 +140,19 @@ Excel 固定包含以下 8 个工作表，顺序保持不变：
 
 入口支持上传构件明细 CSV 和可选人工复核 CSV；加载后可在六个页面之间切换：项目概览、工程量分析、构件查询、数据质量检查、误差分析、报表导出。工程量分析页提供七类 Plotly 图表，报表导出页提供 Excel 和六个 UTF-8-SIG CSV 下载。页面只编排既有 PipelineArtifacts，不在界面层复制计算规则。
 
-Streamlit 上传入口仍仅支持 CSV；可选 IFC reader 不在界面中直接读取，可按上面的独立命令检查。上传数据、图表、金额和误差均用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
+Streamlit 输入入口现支持 CSV（默认）和可选 IFC reader。选择 IFC 后上传 `.ifc` 文件；如果缺少 IfcOpenShell，页面会给出安装 `requirements-ifc.txt` 的中文提示，CSV 分支仍可继续使用。上传数据、图表、金额和误差均用于程序演示与教学验证；本项目单价为教学示例数据，不用于正式工程造价，也不对真实项目的精度、完整性、性能或验收结论作出承诺。
+
+## 阶段 3.6 Streamlit IFC 接入
+
+IFC 上传会先经过 `src/ifc_reader.py`，再进入与 CSV 相同的 Pipeline。结果继续保留 `source=IFC`、IFC 文件名和原始行号，不会把 IFC 临时转换后伪装成 CSV。基础环境不安装 IfcOpenShell 时，应用仍可启动并使用 CSV；需要 IFC 时按需安装：
+
+```powershell
+.venv\python.exe -m pip install -r requirements-ifc.txt
+.venv\python.exe -m streamlit run app\streamlit_app.py
+```
 
 以下边界仍未实现，当前命令不会调用它们：
 
-- Streamlit 中的 IFC 上传接入（IfcOpenShell 适配器目前由独立 CLI 提供）。
+- 复杂 IFC 几何、钢筋/幕墙/机电深化、碰撞检测和 IFC 写回。
 
 后续阶段必须复用本阶段的标准字段、配置接口和可追溯约定；人工复核结果需要有 BIM 经验的人员解释，不能把样例金额、误差摘要或质量状态当作正式工程造价、验收结论或真实项目精度证明。

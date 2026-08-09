@@ -8,13 +8,22 @@ calculation and quality rules.
 
 from __future__ import annotations
 
+import io
 import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Final
 
 import streamlit as st
+import pandas as pd
 
-from src.pipeline import PipelineArtifacts, PipelineError, run_pipeline
+from src.config_loader import load_project_config
+from src.ifc_reader import read_ifc
+from src.pipeline import (
+    PipelineArtifacts,
+    PipelineError,
+    run_pipeline,
+    run_pipeline_from_frame,
+)
 
 
 _DEFAULT_SOURCE_NAME: Final[str] = "uploaded.csv"
@@ -108,4 +117,73 @@ def load_artifacts_from_bytes(
         raise DataLoadError(_repair_hint(exc)) from exc
 
 
-__all__ = ["DataLoadError", "load_artifacts_from_bytes"]
+@st.cache_data(ttl="15m", max_entries=20)
+def _load_ifc_artifacts_cached(
+    content: bytes,
+    source_name: str,
+    config_dir: str,
+    manual_content: bytes | None,
+) -> PipelineArtifacts:
+    """Read IFC bytes and pass its DataFrame into the shared pipeline."""
+
+    safe_source_name = _safe_basename(source_name)
+    try:
+        with tempfile.TemporaryDirectory(prefix="bim-quantity-ifc-") as temporary_dir:
+            input_path = Path(temporary_dir) / safe_source_name
+            input_path.write_bytes(content)
+            config_path = Path(config_dir)
+            config = load_project_config(config_path)
+            result = read_ifc(input_path, config)
+            if result.frame.empty and result.diagnostics:
+                raise DataLoadError("IFC 文件没有可读取的六类构件；请检查模型和 IFC 版本。")
+
+            manual_frame = None
+            if manual_content is not None:
+                manual_frame = pd.read_csv(
+                    io.BytesIO(manual_content), encoding="utf-8-sig"
+                )
+            return run_pipeline_from_frame(
+                result.frame,
+                config_path,
+                safe_source_name,
+                manual_frame=manual_frame,
+            )
+    except DataLoadError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - optional boundary is user-facing
+        raise DataLoadError(
+            f"IFC 数据加载失败：{exc}；请安装 requirements-ifc.txt 并检查 IFC 文件后重试。"
+        ) from exc
+
+
+def load_artifacts_from_ifc_bytes(
+    content: bytes,
+    source_name: str,
+    config_dir: Path,
+    manual_content: bytes | None = None,
+) -> PipelineArtifacts:
+    """Load an IFC byte payload through the optional reader and shared pipeline."""
+
+    if not isinstance(content, bytes):
+        raise DataLoadError("IFC 输入内容必须是 bytes；请重新选择 IFC 文件后重试。")
+    if manual_content is not None and not isinstance(manual_content, bytes):
+        raise DataLoadError("人工复核表内容必须是 bytes；请重新选择 CSV 文件后重试。")
+    try:
+        return _load_ifc_artifacts_cached(
+            bytes(content),
+            _safe_basename(source_name),
+            str(Path(config_dir)),
+            None if manual_content is None else bytes(manual_content),
+        )
+    except DataLoadError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - keep the public error contract
+        raise DataLoadError(
+            f"IFC 数据加载失败：{exc}；请安装 requirements-ifc.txt 并检查 IFC 文件后重试。"
+        ) from exc
+
+__all__ = [
+    "DataLoadError",
+    "load_artifacts_from_bytes",
+    "load_artifacts_from_ifc_bytes",
+]
