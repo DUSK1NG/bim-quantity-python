@@ -189,4 +189,3 @@ def test_all_chart_functions_return_annotated_empty_figures_for_empty_or_missing
         assert isinstance(figure, go.Figure)
         assert not figure.data
         assert "暂无可展示数据" in " ".join(str(annotation.text) for annotation in figure.layout.annotations)
-
