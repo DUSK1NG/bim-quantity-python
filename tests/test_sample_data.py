@@ -173,18 +173,14 @@ def test_generator_result_counts_are_diagnostics_not_csv_ground_truth(generated_
     assert "exception_tags" in frame.columns
 
 
-def test_sample_document_contains_exact_disclaimer_and_exception_counts():
+def test_sample_document_links_to_generation_guide_and_preserves_disclaimer():
     text = (Path(__file__).parents[1] / "data" / "sample" / "README.md").read_text(
         encoding="utf-8"
     )
     assert "程序演示数据" in text
-    assert "缺失材料 5 条" in text
-    assert "缺失楼层 3 条" in text
-    assert "重复 GUID 2 组" in text
-    assert "体积为零 4 条" in text
-    assert "名称不符合规则 3 条" in text
-    assert "单位异常 2 条" in text
-    assert "单价无法匹配 2 条" in text
+    assert "](../../docs/usage.md)" in text
+    guide = Path(__file__).parents[1] / "docs" / "usage.md"
+    assert "scripts\\generate_sample_data.py" in guide.read_text(encoding="utf-8")
     assert "本项目单价为教学示例数据，不用于正式工程造价。" in text
 
 

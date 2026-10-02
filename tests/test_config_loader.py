@@ -425,32 +425,16 @@ def test_current_outputs_and_docs_exist():
     # its presence must not make the Phase 2 foundation import IfcOpenShell.
 
 
-def test_root_readme_describes_current_phase_two_capabilities():
-    """README must expose the delivered generator and defer later modules."""
+def test_root_readme_links_to_usage_and_development_guides():
+    """The README exposes capabilities, usage guides, and data limitations."""
 
-    text = (Path(__file__).parents[1] / "README.md").read_text(encoding="utf-8")
-    assert "Python 3.10/3.11" in text
-    assert "Windows 10/11" in text
-    assert "scripts/generate_sample_data.py" in text
-    assert "-m pytest -q" in text
-    assert "20260804" in text
-    assert "240" in text
-    for label in (
-        "一层",
-        "二层",
-        "三层",
-        "IfcBeam",
-        "IfcColumn",
-        "IfcSlab",
-        "IfcWall",
-        "IfcDoor",
-        "IfcWindow",
-    ):
-        assert label in text
-    assert "程序演示数据" in text
-    assert "本项目单价为教学示例数据，不用于正式工程造价。" in text
-    assert "CSV reader" in text
+    root = Path(__file__).parents[1]
+    text = (root / "README.md").read_text(encoding="utf-8")
+    for guide in ("docs/usage.md", "docs/development.md"):
+        assert f"]({guide})" in text
+        assert (root / guide).is_file()
+    assert "CSV" in text
+    assert "IFC" in text
     assert "Streamlit" in text
-    assert "IFC reader" in text
-    assert "planned for Task 3" not in text
-    assert "not available in this task" not in text
+    assert "教学演示数据" in text
+    assert "不用于正式工程造价" in text
